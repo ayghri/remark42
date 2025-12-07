@@ -210,14 +210,25 @@ func (e *EmailVerifyHandler) verifyCode(w http.ResponseWriter, r *http.Request, 
 		}
 	}
 
+	// Generate a random token ID
+	tokenID, err := e.generateCode() // reuse code generation for token ID
+	if err != nil {
+		rest.SendErrorJSON(w, r, e.L, http.StatusInternalServerError, err, "can't make token id")
+		return
+	}
+
 	// Create and set auth token
 	claims := token.Claims{
 		User: &u,
 		RegisteredClaims: jwt.RegisteredClaims{
+			ID:       tokenID,
 			Audience: jwt.ClaimStrings{entry.Site},
 			Issuer:   e.Issuer,
 		},
 		SessionOnly: entry.SessOnly,
+		AuthProvider: &token.AuthProvider{
+			Name: e.ProviderName,
+		},
 	}
 
 	if _, err := e.TokenService.Set(w, claims); err != nil {
@@ -225,7 +236,7 @@ func (e *EmailVerifyHandler) verifyCode(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	rest.RenderJSON(w, rest.JSON{"user": u, "token": "authenticated"})
+	rest.RenderJSON(w, claims.User)
 }
 
 // generateCode generates a random code in XXX-XXX format (letters and numbers, no confusing chars)

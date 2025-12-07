@@ -15,14 +15,14 @@ export function anonymousSignin(user: string): Promise<User> {
  * First step of two of `email` authorization
  */
 export function emailSignin(email: string, username: string): Promise<unknown> {
-  return authFetcher.get(EMAIL_SIGNIN_ENDPOINT, { address: email, user: username });
+  return authFetcher.get(EMAIL_SIGNIN_ENDPOINT, { address: email, user: username, site: siteId });
 }
 
 /**
  * Second step of two of `email` authorization
  */
 export function verifyEmailSignin(token: string): Promise<User> {
-  return authFetcher.get(EMAIL_SIGNIN_ENDPOINT, { token });
+  return authFetcher.get(EMAIL_SIGNIN_ENDPOINT, { token, sess: '1' });
 }
 
 /**
