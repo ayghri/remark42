@@ -19,6 +19,14 @@ export function getProviders(): [OAuthProvider[], FormProvider[]] {
 }
 
 export function getTokenInvalidReason(token: string): null | keyof typeof messages {
+  // Check if it's a short code format (XXX-XXX)
+  const shortCodePattern = /^[A-Za-z0-9]{3}-[A-Za-z0-9]{3}$/;
+  if (shortCodePattern.test(token)) {
+    // Short codes are valid format, let the backend validate
+    return null;
+  }
+
+  // Otherwise, validate as JWT
   try {
     if (isJwtExpired(token)) {
       return 'expiredToken';
