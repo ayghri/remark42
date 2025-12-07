@@ -3,7 +3,7 @@ package providers
 
 import (
 	"crypto/rand"
-	"crypto/sha1"
+	"crypto/sha1" //nolint:gosec // sha1 is used for ID hashing, same as original auth library
 	"fmt"
 	"html/template"
 	"net/http"
@@ -85,10 +85,10 @@ func (e *EmailVerifyHandler) LoginHandler(w http.ResponseWriter, r *http.Request
 }
 
 // AuthHandler doesn't do anything for email verification
-func (e *EmailVerifyHandler) AuthHandler(w http.ResponseWriter, r *http.Request) {}
+func (e *EmailVerifyHandler) AuthHandler(_ http.ResponseWriter, _ *http.Request) {}
 
 // LogoutHandler handles logout
-func (e *EmailVerifyHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
+func (e *EmailVerifyHandler) LogoutHandler(w http.ResponseWriter, _ *http.Request) {
 	e.TokenService.Reset(w)
 }
 
@@ -190,7 +190,7 @@ func (e *EmailVerifyHandler) verifyCode(w http.ResponseWriter, r *http.Request, 
 	// Create user
 	u := token.User{
 		Name: entry.User,
-		ID:   e.ProviderName + "_" + token.HashID(sha1.New(), entry.Address),
+		ID:   e.ProviderName + "_" + token.HashID(sha1.New(), entry.Address), //nolint:gosec // sha1 used for ID hashing, same as auth library
 	}
 
 	// Try to get gravatar for email

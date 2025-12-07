@@ -54,7 +54,7 @@ func TestEmailVerifyHandler_SendConfirmation(t *testing.T) {
 
 	h := NewEmailVerifyHandler("email", "", sender, &mockTokenService{}, "remark42", nil, false)
 
-	req := httptest.NewRequest(http.MethodGet, "/login?user=testuser&address=test@example.com&site=testsite", nil)
+	req := httptest.NewRequest(http.MethodGet, "/login?user=testuser&address=test@example.com&site=testsite", http.NoBody)
 	rr := httptest.NewRecorder()
 
 	h.LoginHandler(rr, req)
@@ -71,20 +71,20 @@ func TestEmailVerifyHandler_SendConfirmation(t *testing.T) {
 }
 
 func TestEmailVerifyHandler_SendConfirmationMissingParams(t *testing.T) {
-	sender := mockSender(func(address, text string) error {
+	sender := mockSender(func(_, _ string) error {
 		return nil
 	})
 
 	h := NewEmailVerifyHandler("email", "", sender, &mockTokenService{}, "remark42", nil, false)
 
 	// Missing user
-	req := httptest.NewRequest(http.MethodGet, "/login?address=test@example.com&site=testsite", nil)
+	req := httptest.NewRequest(http.MethodGet, "/login?address=test@example.com&site=testsite", http.NoBody)
 	rr := httptest.NewRecorder()
 	h.LoginHandler(rr, req)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 
 	// Missing address
-	req = httptest.NewRequest(http.MethodGet, "/login?user=testuser&site=testsite", nil)
+	req = httptest.NewRequest(http.MethodGet, "/login?user=testuser&site=testsite", http.NoBody)
 	rr = httptest.NewRecorder()
 	h.LoginHandler(rr, req)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
@@ -92,11 +92,11 @@ func TestEmailVerifyHandler_SendConfirmationMissingParams(t *testing.T) {
 
 func TestEmailVerifyHandler_VerifyCode(t *testing.T) {
 	var tokenSet bool
-	sender := mockSender(func(address, text string) error {
+	sender := mockSender(func(_, _ string) error {
 		return nil
 	})
 	tokenService := &mockTokenService{
-		setFn: func(w http.ResponseWriter, claims token.Claims) (token.Claims, error) {
+		setFn: func(_ http.ResponseWriter, claims token.Claims) (token.Claims, error) {
 			tokenSet = true
 			return claims, nil
 		},
@@ -105,7 +105,7 @@ func TestEmailVerifyHandler_VerifyCode(t *testing.T) {
 	h := NewEmailVerifyHandler("email", "", sender, tokenService, "remark42", nil, false)
 
 	// First, send confirmation to get a code
-	req := httptest.NewRequest(http.MethodGet, "/login?user=testuser&address=test@example.com&site=testsite", nil)
+	req := httptest.NewRequest(http.MethodGet, "/login?user=testuser&address=test@example.com&site=testsite", http.NoBody)
 	rr := httptest.NewRecorder()
 	h.LoginHandler(rr, req)
 	require.Equal(t, http.StatusOK, rr.Code)
@@ -121,7 +121,7 @@ func TestEmailVerifyHandler_VerifyCode(t *testing.T) {
 	require.NotEmpty(t, code)
 
 	// Verify with the code
-	req = httptest.NewRequest(http.MethodGet, "/login?token="+code, nil)
+	req = httptest.NewRequest(http.MethodGet, "/login?token="+code, http.NoBody)
 	rr = httptest.NewRecorder()
 	h.LoginHandler(rr, req)
 
@@ -135,11 +135,11 @@ func TestEmailVerifyHandler_VerifyCode(t *testing.T) {
 }
 
 func TestEmailVerifyHandler_VerifyCodeCaseInsensitive(t *testing.T) {
-	sender := mockSender(func(address, text string) error {
+	sender := mockSender(func(_, _ string) error {
 		return nil
 	})
 	tokenService := &mockTokenService{
-		setFn: func(w http.ResponseWriter, claims token.Claims) (token.Claims, error) {
+		setFn: func(_ http.ResponseWriter, claims token.Claims) (token.Claims, error) {
 			return claims, nil
 		},
 	}
@@ -147,7 +147,7 @@ func TestEmailVerifyHandler_VerifyCodeCaseInsensitive(t *testing.T) {
 	h := NewEmailVerifyHandler("email", "", sender, tokenService, "remark42", nil, false)
 
 	// First, send confirmation to get a code
-	req := httptest.NewRequest(http.MethodGet, "/login?user=testuser&address=test@example.com&site=testsite", nil)
+	req := httptest.NewRequest(http.MethodGet, "/login?user=testuser&address=test@example.com&site=testsite", http.NoBody)
 	rr := httptest.NewRecorder()
 	h.LoginHandler(rr, req)
 	require.Equal(t, http.StatusOK, rr.Code)
@@ -162,7 +162,7 @@ func TestEmailVerifyHandler_VerifyCodeCaseInsensitive(t *testing.T) {
 	h.codesMu.RUnlock()
 
 	// Verify with lowercase code
-	req = httptest.NewRequest(http.MethodGet, "/login?token="+strings.ToLower(code), nil)
+	req = httptest.NewRequest(http.MethodGet, "/login?token="+strings.ToLower(code), http.NoBody)
 	rr = httptest.NewRecorder()
 	h.LoginHandler(rr, req)
 
@@ -170,13 +170,13 @@ func TestEmailVerifyHandler_VerifyCodeCaseInsensitive(t *testing.T) {
 }
 
 func TestEmailVerifyHandler_InvalidCode(t *testing.T) {
-	sender := mockSender(func(address, text string) error {
+	sender := mockSender(func(_, _ string) error {
 		return nil
 	})
 
 	h := NewEmailVerifyHandler("email", "", sender, &mockTokenService{}, "remark42", nil, false)
 
-	req := httptest.NewRequest(http.MethodGet, "/login?token=ABC-123", nil)
+	req := httptest.NewRequest(http.MethodGet, "/login?token=ABC-123", http.NoBody)
 	rr := httptest.NewRecorder()
 	h.LoginHandler(rr, req)
 
@@ -185,7 +185,7 @@ func TestEmailVerifyHandler_InvalidCode(t *testing.T) {
 }
 
 func TestEmailVerifyHandler_ExpiredCode(t *testing.T) {
-	sender := mockSender(func(address, text string) error {
+	sender := mockSender(func(_, _ string) error {
 		return nil
 	})
 
@@ -193,7 +193,7 @@ func TestEmailVerifyHandler_ExpiredCode(t *testing.T) {
 	h.codeTTL = 1 * time.Millisecond // Very short TTL
 
 	// Send confirmation
-	req := httptest.NewRequest(http.MethodGet, "/login?user=testuser&address=test@example.com&site=testsite", nil)
+	req := httptest.NewRequest(http.MethodGet, "/login?user=testuser&address=test@example.com&site=testsite", http.NoBody)
 	rr := httptest.NewRecorder()
 	h.LoginHandler(rr, req)
 	require.Equal(t, http.StatusOK, rr.Code)
@@ -211,7 +211,7 @@ func TestEmailVerifyHandler_ExpiredCode(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// Try to verify with expired code
-	req = httptest.NewRequest(http.MethodGet, "/login?token="+code, nil)
+	req = httptest.NewRequest(http.MethodGet, "/login?token="+code, http.NoBody)
 	rr = httptest.NewRecorder()
 	h.LoginHandler(rr, req)
 
@@ -220,11 +220,11 @@ func TestEmailVerifyHandler_ExpiredCode(t *testing.T) {
 }
 
 func TestEmailVerifyHandler_CodeUsedOnce(t *testing.T) {
-	sender := mockSender(func(address, text string) error {
+	sender := mockSender(func(_, _ string) error {
 		return nil
 	})
 	tokenService := &mockTokenService{
-		setFn: func(w http.ResponseWriter, claims token.Claims) (token.Claims, error) {
+		setFn: func(_ http.ResponseWriter, claims token.Claims) (token.Claims, error) {
 			return claims, nil
 		},
 	}
@@ -232,7 +232,7 @@ func TestEmailVerifyHandler_CodeUsedOnce(t *testing.T) {
 	h := NewEmailVerifyHandler("email", "", sender, tokenService, "remark42", nil, false)
 
 	// Send confirmation
-	req := httptest.NewRequest(http.MethodGet, "/login?user=testuser&address=test@example.com&site=testsite", nil)
+	req := httptest.NewRequest(http.MethodGet, "/login?user=testuser&address=test@example.com&site=testsite", http.NoBody)
 	rr := httptest.NewRecorder()
 	h.LoginHandler(rr, req)
 	require.Equal(t, http.StatusOK, rr.Code)
@@ -247,13 +247,13 @@ func TestEmailVerifyHandler_CodeUsedOnce(t *testing.T) {
 	h.codesMu.RUnlock()
 
 	// First verification should succeed
-	req = httptest.NewRequest(http.MethodGet, "/login?token="+code, nil)
+	req = httptest.NewRequest(http.MethodGet, "/login?token="+code, http.NoBody)
 	rr = httptest.NewRecorder()
 	h.LoginHandler(rr, req)
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Second verification should fail
-	req = httptest.NewRequest(http.MethodGet, "/login?token="+code, nil)
+	req = httptest.NewRequest(http.MethodGet, "/login?token="+code, http.NoBody)
 	rr = httptest.NewRecorder()
 	h.LoginHandler(rr, req)
 	assert.Equal(t, http.StatusForbidden, rr.Code)
@@ -262,14 +262,14 @@ func TestEmailVerifyHandler_CodeUsedOnce(t *testing.T) {
 func TestEmailVerifyHandler_LogoutHandler(t *testing.T) {
 	var resetCalled bool
 	tokenService := &mockTokenService{
-		resetFn: func(w http.ResponseWriter) {
+		resetFn: func(_ http.ResponseWriter) {
 			resetCalled = true
 		},
 	}
 
 	h := &EmailVerifyHandler{TokenService: tokenService}
 
-	req := httptest.NewRequest(http.MethodGet, "/logout", nil)
+	req := httptest.NewRequest(http.MethodGet, "/logout", http.NoBody)
 	rr := httptest.NewRecorder()
 	h.LogoutHandler(rr, req)
 
@@ -289,15 +289,15 @@ type mockTokenService struct {
 	resetFn func(w http.ResponseWriter)
 }
 
-func (m *mockTokenService) Token(claims token.Claims) (string, error) {
+func (m *mockTokenService) Token(_ token.Claims) (string, error) {
 	return "mock-token", nil
 }
 
-func (m *mockTokenService) Parse(tokenString string) (token.Claims, error) {
+func (m *mockTokenService) Parse(_ string) (token.Claims, error) {
 	return token.Claims{}, nil
 }
 
-func (m *mockTokenService) IsExpired(claims token.Claims) bool {
+func (m *mockTokenService) IsExpired(_ token.Claims) bool {
 	return false
 }
 
