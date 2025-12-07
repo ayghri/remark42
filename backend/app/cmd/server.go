@@ -992,7 +992,17 @@ func (s *ServerCommand) addAuthProviders(authenticator *auth.Service) error {
 		if err != nil {
 			return err
 		}
-		authenticator.AddVerifProvider("email", string(tmpl), sndr)
+		// Use custom email verification provider with short codes (XXX-XXX format)
+		emailVerifyHandler := providers.NewEmailVerifyHandler(
+			"email",
+			string(tmpl),
+			sndr,
+			authenticator.TokenService(),
+			"remark42",
+			authenticator.AvatarProxy(),
+			true, // UseGravatar
+		)
+		authenticator.AddCustomHandler(emailVerifyHandler)
 	}
 
 	if s.Auth.Anonymous {
